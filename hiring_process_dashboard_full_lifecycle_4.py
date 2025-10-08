@@ -241,7 +241,7 @@ with col1:
                          text=[pretty_pct(BASE_RATE)], textposition='auto'))
     fig.add_trace(go.Bar(x=['Current State'], y=[100 * CURRENT_STATE], marker_color='#9CA3AF',
                          text=[pretty_pct(CURRENT_STATE)], textposition='auto'))
-    fig.add_trace(go.Bar(x=['Your process'], y=[100 * success_rate_process], marker_color='#0047AB',
+    fig.add_trace(go.Bar(x=['New process'], y=[100 * success_rate_process], marker_color='#0047AB',
                          text=[pretty_pct(success_rate_process)], textposition='auto'))
     fig.update_layout(title='Chance of hiring a Bar Raiser',
                       yaxis_title='% of hires', yaxis_range=[0, 100], showlegend=False)
