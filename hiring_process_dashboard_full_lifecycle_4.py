@@ -152,7 +152,7 @@ if not selected_methods:
     st.stop()
 
 # -----------------------------
-# Combine validities (reduced sensitivity to sliders)
+# Combine validities (reduced sensitivity + reference checks bonus)
 # -----------------------------
 r_list = [METHODS[m]["r"] for m in selected_methods if "Gut Feel" not in m]
 base_r = max(r_list) if r_list else 0.0
@@ -166,7 +166,10 @@ alpha = interview_count / len(selected_methods)
 role_scaled = 0.5 * (1.0 + role_clarity)              # 0.0 -> 0.5, 1.0 -> 1.0
 interviewer_scaled = 0.5 * (1.0 + interviewer_effectiveness)
 
-method_stack = (base_r + incremental_bonus) * gut_penalty
+# Reference checks provide a modest additive lift to r
+ref_bonus = 0.02 if any("Reference Checks" in m for m in selected_methods) else 0.0
+
+method_stack = (base_r + incremental_bonus + ref_bonus) * gut_penalty
 method_stack = method_stack * (1 - alpha + alpha * interviewer_scaled * stages_factor)
 
 # Values interview modest coupling to ORIGINAL role_clarity (kept as-is)
@@ -177,10 +180,10 @@ if any("Values Alignment" in m for m in selected_methods):
 prelim_validity = method_stack * role_scaled
 
 # -----------------------------
-# Advanced Assumptions now have stronger weight on r
+# Advanced Assumptions with stronger weight on r
 # Defaults (0.10, 0.02) → multiplier = 1.00.
 # Lower selection ratio (more selective) boosts r; lower base rate damps r; higher base rate lifts r.
-# Increased weight to ±12% per factor (clamped).
+# ±12% per factor (clamped) so the effect is visible but bounded.
 # -----------------------------
 def clamp(x, lo, hi): return max(lo, min(hi, x))
 
