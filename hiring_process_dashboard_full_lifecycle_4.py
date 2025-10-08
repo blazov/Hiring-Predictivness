@@ -177,20 +177,19 @@ if any("Values Alignment" in m for m in selected_methods):
 prelim_validity = method_stack * role_scaled
 
 # -----------------------------
-# Make Advanced Assumptions influence the core indicators
-# Small, bounded effect so leadership mapping remains stable.
+# Advanced Assumptions now have stronger weight on r
 # Defaults (0.10, 0.02) → multiplier = 1.00.
-# Lower selection ratio (more selective) slightly boosts r; very low base rate slightly dampens r.
+# Lower selection ratio (more selective) boosts r; lower base rate damps r; higher base rate lifts r.
+# Increased weight to ±12% per factor (clamped).
 # -----------------------------
 def clamp(x, lo, hi): return max(lo, min(hi, x))
 
-# Normalize across slider ranges
-m_br = 1 + 0.04 * ((BASE_RATE - 0.10) / 0.39)         # 0.01..0.50 → up to ±4%
-m_sr = 1 + 0.04 * ((0.02 - SELECTION_RATIO) / 0.19)   # 0.01..0.20 → up to ±4% (lower ratio = more selective = slight lift)
-m_br = clamp(m_br, 0.96, 1.04)
-m_sr = clamp(m_sr, 0.96, 1.04)
+m_br = 1 + 0.12 * ((BASE_RATE - 0.10) / 0.39)         # 0.01..0.50 → up to ±12%
+m_sr = 1 + 0.12 * ((0.02 - SELECTION_RATIO) / 0.19)   # 0.01..0.20 → up to ±12%
+m_br = clamp(m_br, 0.88, 1.12)
+m_sr = clamp(m_sr, 0.88, 1.12)
 
-final_validity = float(min(prelim_validity * m_br * m_sr, 0.65))
+final_validity = float(min(max(prelim_validity * m_br * m_sr, 0.0), 0.65))
 
 # -----------------------------
 # Bar Raiser rate = r²
@@ -220,7 +219,7 @@ rbr, rsolid, rmiss = apply_environment_effect(br_p, solid_p, miss_p, preset_labe
 st.header("📈 Key outcomes & explanations")
 c1, c2, c3 = st.columns(3)
 c1.metric("Predictive power (r)", f"{final_validity:.2f}")
-c2.metric("Share of performance predicted (r²)", f"{final_validity**2:.0%}")
+c2.metric("How Much Our Process Can Explain", f"{final_validity**2:.0%}")
 c3.metric("% of hires who are Bar Raisers", pretty_pct(success_rate_process))
 
 st.caption("In this model, Bar Raiser % = r². Example: r = 0.65 ⇒ r² = 42% ⇒ ~4 Bar Raisers, 5 Solid, 1 Miss per 10 hires (before environment).")
