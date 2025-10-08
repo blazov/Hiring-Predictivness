@@ -127,9 +127,9 @@ with st.sidebar:
         workload = st.slider("Workload sustainability", 0.0, 1.0, st.session_state.get("workload", base), 0.01, key="workload")
 
 # -----------------------------
-# Stages multiplier per your rules
+# Stages multiplier per your request — 3 and 4 close; 2 and 1 a bigger drop
 # -----------------------------
-stages_multiplier_map = {1:0.60, 2:0.80, 3:0.92, 4:1.00, 5:1.02, 6:1.00, 7:0.98, 8:0.96}
+stages_multiplier_map = {1:0.50, 2:0.75, 3:0.96, 4:1.00, 5:1.02, 6:1.00, 7:0.98, 8:0.96}
 stages_factor = stages_multiplier_map.get(num_stages, 1.0)
 
 # -----------------------------
@@ -152,7 +152,7 @@ if not selected_methods:
     st.stop()
 
 # -----------------------------
-# Combine validities (sensible stacking)
+# Combine validities (reduced sensitivity to sliders)
 # -----------------------------
 r_list = [METHODS[m]["r"] for m in selected_methods if "Gut Feel" not in m]
 base_r = max(r_list) if r_list else 0.0
@@ -162,21 +162,38 @@ gut_penalty = 0.75 if any("Gut Feel" in m for m in selected_methods) else 1.0
 interview_count = sum(1 for m in selected_methods if METHODS[m]["type"] == "interview")
 alpha = interview_count / len(selected_methods)
 
-method_stack = (base_r + incremental_bonus) * gut_penalty
-method_stack = method_stack * (1 - alpha + alpha * interviewer_effectiveness * stages_factor)
+# Halved sensitivity: scale both sliders to 0.5..1.0 instead of 0..1.0
+role_scaled = 0.5 * (1.0 + role_clarity)              # 0.0 -> 0.5, 1.0 -> 1.0
+interviewer_scaled = 0.5 * (1.0 + interviewer_effectiveness)
 
-# Values interview couples with role clarity
+method_stack = (base_r + incremental_bonus) * gut_penalty
+method_stack = method_stack * (1 - alpha + alpha * interviewer_scaled * stages_factor)
+
+# Values interview modest coupling to ORIGINAL role_clarity (kept as-is)
 if any("Values Alignment" in m for m in selected_methods):
     method_stack *= (1.0 + 0.05 * max(0.0, (role_clarity - 0.80) / 0.20))
 
-# NEW: Reference Checks provide a small positive contribution even if not the best method
-if any("Reference Checks" in m for m in selected_methods):
-    method_stack += 0.01  # modest additive bump to reflect incremental signal
-
-final_validity = float(min(method_stack * role_clarity, 0.65))
+# Preliminary validity before assumptions
+prelim_validity = method_stack * role_scaled
 
 # -----------------------------
-# Bar Raiser rate = r² (leadership‑friendly alignment)
+# Make Advanced Assumptions influence the core indicators
+# Small, bounded effect so leadership mapping remains stable.
+# Defaults (0.10, 0.02) → multiplier = 1.00.
+# Lower selection ratio (more selective) slightly boosts r; very low base rate slightly dampens r.
+# -----------------------------
+def clamp(x, lo, hi): return max(lo, min(hi, x))
+
+# Normalize across slider ranges
+m_br = 1 + 0.04 * ((BASE_RATE - 0.10) / 0.39)         # 0.01..0.50 → up to ±4%
+m_sr = 1 + 0.04 * ((0.02 - SELECTION_RATIO) / 0.19)   # 0.01..0.20 → up to ±4% (lower ratio = more selective = slight lift)
+m_br = clamp(m_br, 0.96, 1.04)
+m_sr = clamp(m_sr, 0.96, 1.04)
+
+final_validity = float(min(prelim_validity * m_br * m_sr, 0.65))
+
+# -----------------------------
+# Bar Raiser rate = r²
 # -----------------------------
 success_rate_process = final_validity ** 2
 br_p, solid_p, miss_p = ten_box_counts_fixed_miss(success_rate_process)
@@ -184,7 +201,7 @@ br_p, solid_p, miss_p = ten_box_counts_fixed_miss(success_rate_process)
 # -----------------------------
 # Post‑offer environment multiplier
 # -----------------------------
-if fine_tune:
+if 'fine_tune' in locals() and fine_tune:
     env_factors = np.array([st.session_state[k] for k in keys])
     env_score = float(env_factors.mean())
     if env_score >= 0.5:
@@ -203,30 +220,29 @@ rbr, rsolid, rmiss = apply_environment_effect(br_p, solid_p, miss_p, preset_labe
 st.header("📈 Key outcomes & explanations")
 c1, c2, c3 = st.columns(3)
 c1.metric("Predictive power (r)", f"{final_validity:.2f}")
-c2.metric("Explained variance (r²)", f"{final_validity**2:.0%}")
+c2.metric("Share of performance predicted (r²)", f"{final_validity**2:.0%}")
 c3.metric("% of hires who are Bar Raisers", pretty_pct(success_rate_process))
 
-st.caption("In this leadership‑view model, **Bar Raiser % = r²**. "
-           "Example: if r = 0.65, r² = 42% ⇒ **~4 Bar Raisers, 5 Solid, 1 Miss** per 10 hires (before environment).")
+st.caption("In this model, Bar Raiser % = r². Example: r = 0.65 ⇒ r² = 42% ⇒ ~4 Bar Raisers, 5 Solid, 1 Miss per 10 hires (before environment).")
 
 # -----------------------------
 # Visuals (hiring outcomes)
 # -----------------------------
-st.markdown("---")
-st.header("📊 Hiring outcomes")
+st.markdown('---')
+st.header('📊 Hiring outcomes')
 
 CURRENT_STATE = 0.35  # 35% Bar Raisers among hires today
 col1, col2 = st.columns(2)
 with col1:
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=['Random'], y=[100 * 0.10], marker_color='lightgray',
-                         text=[pretty_pct(0.10)], textposition='auto'))
+    fig.add_trace(go.Bar(x=['Random'], y=[100 * BASE_RATE], marker_color='lightgray',
+                         text=[pretty_pct(BASE_RATE)], textposition='auto'))
     fig.add_trace(go.Bar(x=['Current State'], y=[100 * CURRENT_STATE], marker_color='#9CA3AF',
                          text=[pretty_pct(CURRENT_STATE)], textposition='auto'))
     fig.add_trace(go.Bar(x=['Your process'], y=[100 * success_rate_process], marker_color='#0047AB',
                          text=[pretty_pct(success_rate_process)], textposition='auto'))
-    fig.update_layout(title="Chance of hiring a Bar Raiser",
-                      yaxis_title="% of hires", yaxis_range=[0, 100], showlegend=False)
+    fig.update_layout(title='Chance of hiring a Bar Raiser',
+                      yaxis_title='% of hires', yaxis_range=[0, 100], showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
@@ -234,20 +250,20 @@ with col2:
     fig2.add_trace(go.Bar(x=['Bar Raiser','Solid','Miss'], y=[br_p, solid_p, miss_p],
                           marker_color=['#2E8B57','#4682B4','#B22222'],
                           text=[br_p, solid_p, miss_p], textposition='auto'))
-    fig2.update_layout(title="Expected distribution per 10 hires",
-                       yaxis_title="count out of 10", yaxis_range=[0,10], showlegend=False)
+    fig2.update_layout(title='Expected distribution per 10 hires',
+                       yaxis_title='count out of 10', yaxis_range=[0,10], showlegend=False)
     st.plotly_chart(fig2, use_container_width=True)
 
 # -----------------------------
 # Visuals (realized performance)
 # -----------------------------
-st.markdown("---")
-st.header("🔁 Realized performance after offer")
+st.markdown('---')
+st.header('🔁 Realized performance after offer')
 
 cc1, cc2, cc3 = st.columns(3)
-cc1.metric("Environment preset", preset_label)
-cc2.metric("Environment score (0–1)", f"{env_score:.2f}")
-cc3.metric("Talent multiplier", f"×{env_multiplier:.2f}")
+cc1.metric('Environment preset', preset_label)
+cc2.metric('Environment score (0–1)', f'{env_score:.2f}')
+cc3.metric('Talent multiplier', f'×{env_multiplier:.2f}')
 
 colb1, colb2 = st.columns(2)
 with colb1:
@@ -255,7 +271,7 @@ with colb1:
     b1.add_trace(go.Bar(x=['Bar Raiser','Solid','Miss'], y=[br_p, solid_p, miss_p],
                         marker_color=['#2E8B57','#4682B4','#B22222'],
                         text=[br_p, solid_p, miss_p], textposition='auto'))
-    b1.update_layout(title="Before environment (at offer)", yaxis_title="count out of 10", yaxis_range=[0,10], showlegend=False)
+    b1.update_layout(title='Before environment (at offer)', yaxis_title='count out of 10', yaxis_range=[0,10], showlegend=False)
     st.plotly_chart(b1, use_container_width=True)
 
 with colb2:
@@ -263,10 +279,10 @@ with colb2:
     b2.add_trace(go.Bar(x=['Bar Raiser','Solid','Miss'], y=[rbr, rsolid, rmiss],
                         marker_color=['#2E8B57','#4682B4','#B22222'],
                         text=[rbr, rsolid, rmiss], textposition='auto'))
-    b2.update_layout(title="After environment (realized)", yaxis_title="count out of 10", yaxis_range=[0,10], showlegend=False)
+    b2.update_layout(title='After environment (realized)', yaxis_title='count out of 10', yaxis_range=[0,10], showlegend=False)
     st.plotly_chart(b2, use_container_width=True)
 
 st.caption(
-    "Misses are fixed at **1** in the hiring snapshot unless the environment is **Below Average** (min 2) or **Poor** (min 3). "
-    "Excellent environments convert some Solid ⇒ Bar Raiser; weak environments convert some Bar Raiser ⇒ Solid/Miss."
+    'Misses are fixed at 1 in the hiring snapshot unless the environment is Below Average (min 2) or Poor (min 3). '
+    'Excellent environments convert some Solid ⇒ Bar Raiser; weak environments convert some Bar Raiser ⇒ Solid/Miss.'
 )
