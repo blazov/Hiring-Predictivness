@@ -219,7 +219,7 @@ rbr, rsolid, rmiss = apply_environment_effect(br_p, solid_p, miss_p, preset_labe
 st.header("📈 Key outcomes & explanations")
 c1, c2, c3 = st.columns(3)
 c1.metric("Predictive power (r)", f"{final_validity:.2f}")
-c2.metric("How Much Our Process Can Explain", f"{final_validity**2:.0%}")
+c2.metric("How Much Our Process Can Explain (r²)", f"{final_validity**2:.0%}")
 c3.metric("% of hires who are Bar Raisers", pretty_pct(success_rate_process))
 
 st.caption("In this model, Bar Raiser % = r². Example: r = 0.65 ⇒ r² = 42% ⇒ ~4 Bar Raisers, 5 Solid, 1 Miss per 10 hires (before environment).")
