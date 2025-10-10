@@ -107,7 +107,7 @@ with st.sidebar:
     preset_label = st.selectbox("Environment Preset", preset_labels, index=3)
 
     fine_tune = st.checkbox("Fine‑tune individual factors", value=False)
-    keys = ["m_eff","coaching","onboarding","enable","climate","growth","workload"]
+    keys = ["m_eff","coaching","onboarding","enable","empower","climate","growth","workload"]
     if fine_tune:
         base = preset_baselines[preset_label]
         if st.session_state.get("_last_preset") != preset_label:
@@ -118,6 +118,7 @@ with st.sidebar:
         coaching = st.slider("Coaching & feedback quality", 0.0, 1.0, st.session_state.get("coaching", base), 0.01, key="coaching")
         onboarding = st.slider("Role clarity & expectations", 0.0, 1.0, st.session_state.get("onboarding", base), 0.01, key="onboarding")
         enable = st.slider("Enablement (tools/process)", 0.0, 1.0, st.session_state.get("enable", base), 0.01, key="enable")
+        empower = st.slider("Autonomy & Empowerment", 0.0, 1.0, st.session_state.get("empower", base), 0.01, key="empower")
         climate = st.slider("Team climate & psych safety", 0.0, 1.0, st.session_state.get("climate", base), 0.01, key="climate")
         growth = st.slider("Growth & recognition", 0.0, 1.0, st.session_state.get("growth", base), 0.01, key="growth")
         workload = st.slider("Workload sustainability", 0.0, 1.0, st.session_state.get("workload", base), 0.01, key="workload")
