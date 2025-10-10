@@ -7,8 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Hiring Predictiveness & Lifecycle", page_icon="🎯", layout="wide")
 st.title("🎯 Hiring Predictiveness & Lifecycle")
 st.markdown(
-    "Use the controls to explore how selection quality (r) and the post‑offer environment shape realized performance. "
-    "Key metrics are leadership‑friendly and consistent across charts."
+    
 )
 
 # -----------------------------
@@ -120,7 +119,7 @@ with st.sidebar:
 
         m_eff = st.slider("Manager effectiveness", 0.0, 1.0, st.session_state.get("m_eff", base), 0.01, key="m_eff")
         coaching = st.slider("Coaching & feedback quality", 0.0, 1.0, st.session_state.get("coaching", base), 0.01, key="coaching")
-        onboarding = st.slider("Role clarity post‑offer / onboarding", 0.0, 1.0, st.session_state.get("onboarding", base), 0.01, key="onboarding")
+        onboarding = st.slider("Role clarity & expectations", 0.0, 1.0, st.session_state.get("onboarding", base), 0.01, key="onboarding")
         enable = st.slider("Enablement (tools/process)", 0.0, 1.0, st.session_state.get("enable", base), 0.01, key="enable")
         climate = st.slider("Team climate & psych safety", 0.0, 1.0, st.session_state.get("climate", base), 0.01, key="climate")
         growth = st.slider("Growth & recognition", 0.0, 1.0, st.session_state.get("growth", base), 0.01, key="growth")
