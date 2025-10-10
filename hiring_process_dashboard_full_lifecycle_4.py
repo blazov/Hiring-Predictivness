@@ -131,7 +131,7 @@ stages_factor = stages_multiplier_map.get(num_stages, 1.0)
 # -----------------------------
 # Select Hiring Methods (main)
 # -----------------------------
-st.subheader("Select Hiring Methods")
+st.subheader("Select Evaluation Methods")
 selected_methods = st.multiselect(
     "Pick methods used in the process:",
     options=list(METHODS.keys()),
